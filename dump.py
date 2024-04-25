@@ -1,8 +1,8 @@
 import subprocess
-from io import BytesIO
 import time
 import sys
 from predictor import SignatureDetector, AnomalyDetector
+
 tcpdump_process = subprocess.Popen(['tcpdump', '-w', '-'], stdout=subprocess.PIPE)
 kdd_feature_extractor = subprocess.Popen('./kdd99extractor', stdin=tcpdump_process.stdout, stdout = subprocess.PIPE)
 

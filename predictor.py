@@ -2,8 +2,8 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 from keras.models import load_model
 import numpy as np
-import argparse
-import subprocess
+# import argparse
+# import subprocess
 import pandas as pd
 import pickle
 from io import BytesIO
@@ -82,19 +82,20 @@ class AnomalyDetector(Predictor):
         return AnomalyDetector.to_nominal(self.lof.predict(embeddings))
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Predictor')
-    parser.add_argument('-m', '--model', type=str, help='model path', required=True)
-    parser.add_argument('-f', '--file', type=str, help='pcap file path', required=True)
-    args = parser.parse_args()
-    # validate the model and file paths
-    if not os.path.exists(args.model):
-        raise ValueError('Model file not found')
+    print('hello')
+    # parser = argparse.ArgumentParser(description='Predictor')
+    # parser.add_argument('-m', '--model', type=str, help='model path', required=True)
+    # parser.add_argument('-f', '--file', type=str, help='pcap file path', required=True)
+    # args = parser.parse_args()
+    # # validate the model and file paths
+    # if not os.path.exists(args.model):
+    #     raise ValueError('Model file not found')
 
-    if not os.path.exists(args.file):
-        raise ValueError('File not found')
+    # if not os.path.exists(args.file):
+    #     raise ValueError('File not found')
 
-    data = subprocess.check_output(f'./kdd99extractor {args.file}', shell=True)
+    # data = subprocess.check_output(f'./kdd99extractor {args.file}', shell=True)
 
-    predictor = Predictor(args.model)
+    # predictor = Predictor(args.model)
 
-    print(predictor.predict(data))
+    # print(predictor.predict(data))
