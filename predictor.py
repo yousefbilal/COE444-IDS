@@ -63,7 +63,7 @@ class SignatureDetector(Predictor):
     
     def predict(self, data):
         X = self.preprocess(data)
-        return SignatureDetector.to_nomial(self.model.predict(X))
+        return SignatureDetector.to_nomial(self.model.predict(X, verbose=0))
     
 
 class AnomalyDetector(Predictor):
@@ -78,7 +78,7 @@ class AnomalyDetector(Predictor):
     
     def predict(self, data):
         X = self.preprocess(data)
-        embeddings = self.model.predict(X)
+        embeddings = self.model.predict(X, verbose=0)
         return AnomalyDetector.to_nominal(self.lof.predict(embeddings))
 
 if __name__ == '__main__':
