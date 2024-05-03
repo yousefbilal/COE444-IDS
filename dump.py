@@ -3,6 +3,9 @@ from tkinter import ttk
 import subprocess
 from threading import Thread
 from datetime import datetime
+from predictor import SignatureDetector, AnomalyDetector
+import socket
+
 
 class KddFeatureExtractorGUI:
     def __init__(self, root: tk.Tk):
@@ -17,54 +20,97 @@ class KddFeatureExtractorGUI:
         self.scrollbar = ttk.Scrollbar(self.main_frame, orient="vertical")
         self.scrollbar.pack(side="right", fill="y")
         self.style = ttk.Style()
-        self.style.configure('Treeview',rowheight=25)
-        self.treeview = ttk.Treeview(self.main_frame, show=['headings'], yscrollcommand=self.scrollbar.set)
-        self.treeview["columns"] = ["Time", "Source IP", "Source port", "Destination IP", "Destination port", "Label"]
-        
+        self.style.configure("Treeview", rowheight=25)
+        self.treeview = ttk.Treeview(
+            self.main_frame, show=["headings"], yscrollcommand=self.scrollbar.set
+        )
+        self.treeview["columns"] = [
+            "Time",
+            "Source IP",
+            "Source port",
+            "Destination IP",
+            "Destination port",
+            "Signature label",
+        ]
+
         for col in self.treeview["columns"]:
             self.treeview.heading(col, text=col)
             self.treeview.column(col, minwidth=self.col_width, anchor="center")
-            
+
         self.treeview.pack(fill=tk.BOTH, expand=True)
-        self.treeview.tag_configure('oddrow', background="white")
-        self.treeview.tag_configure('evenrow', background="lightblue")
-        
+        self.treeview.tag_configure("normal", background="white")
+        self.treeview.tag_configure("abnormal", background="lightcoral")
+
         self.scrollbar.config(command=self.treeview.yview)
-        
-        self.root.minsize(self.col_width*len(self.treeview["columns"]), 600)
-        
-        self.kdd_feature_extractor = subprocess.Popen(['./kdd99extractor', '-e'], stdout=subprocess.PIPE, universal_newlines=True)
+
+        self.root.minsize(self.col_width * len(self.treeview["columns"]), 600)
+
+        self.kdd_feature_extractor = subprocess.Popen(
+            ["./kdd99extractor", "-e"], stdout=subprocess.PIPE, universal_newlines=True
+        )
         self.root.protocol("WM_DELETE_WINDOW", self.close_window)
         self.thread = Thread(target=self.update_gui)
         self.thread.start()
 
+        self.sd = SignatureDetector(
+            "signature_detection/signature_detection.h5",
+            "signature_detection/SD_scaler.pkl",
+            "signature_detection/SD_cat_input_codes.pkl",
+        )
+
+        # self.ad = AnomalyDetector(
+        #     "anomaly_detection/encoder.h5",
+        #     "anomaly_detection/AD_scaler.pkl",
+        #     "anomaly_detection/AD_cat_input_codes.pkl",
+        #     "anomaly_detection/AD_lof.pkl",
+        # )
+
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        self.ip = s.getsockname()[0]
+        s.close()
+
     def update_gui(self):
-        
+
         count = 0
         while True:
             output = self.kdd_feature_extractor.stdout.readline().strip()
             if not output:
                 break
-            tag = 'evenrow' if count%2 ==0 else 'oddrow'
-            count += 1
-            # Splitting the output and getting the last four elements
-            data = output.split(',')[-5:]
-            data.insert(0, data.pop(-1))
-            
-            datetime_obj = datetime.fromisoformat(data[0])
-            data[0] = datetime_obj.strftime("%Y-%m-%d %I:%M:%S %p")
 
+            display_data = output.split(",")[-5:]
+
+            if display_data[0] == self.ip:
+                continue
+
+            output = ",".join(output.split(",")[:-5])
+
+            display_data.insert(0, display_data.pop(-1))
+
+            datetime_obj = datetime.fromisoformat(display_data[0])
+            display_data[0] = datetime_obj.strftime("%Y-%m-%d %I:%M:%S %p")
+
+            try:
+                sd_output = self.sd.predict(output)[0]
+            except:
+                continue
+            tag = "normal" if sd_output == "normal" else "abnormal"
+
+            display_data.append(sd_output)
             # Inserting the data into the treeview
-            self.treeview.insert("", "end", values=data, tags=(tag,))
+            self.treeview.insert("", "end", values=display_data, tags=(tag,))
 
             self.treeview.yview_moveto(1)
             self.root.update_idletasks()
 
     def close_window(self):
         self.kdd_feature_extractor.kill()  # Kill the subprocess
+        self.thread.join()
         self.root.destroy()
 
+
 if __name__ == "__main__":
+
     root = tk.Tk()
     app = KddFeatureExtractorGUI(root)
     root.mainloop()
