@@ -1,38 +1,70 @@
-from kivy.app import App
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.label import Label
-from kivy.clock import Clock
+import tkinter as tk
+from tkinter import ttk
 import subprocess
+from threading import Thread
+from datetime import datetime
 
-class KddFeatureExtractorGUI(App):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.data_queue = []
+class KddFeatureExtractorGUI:
+    def __init__(self, root: tk.Tk):
+        self.col_width = 175
+        self.root = root
+        self.root.geometry()
+        self.root.title("KDD Feature Extractor")
+
+        self.main_frame = ttk.Frame(root)
+        self.main_frame.pack(fill=tk.BOTH, expand=True)
+
+        self.scrollbar = ttk.Scrollbar(self.main_frame, orient="vertical")
+        self.scrollbar.pack(side="right", fill="y")
+        self.style = ttk.Style()
+        self.style.configure('Treeview',rowheight=25)
+        self.treeview = ttk.Treeview(self.main_frame, show=['headings'], yscrollcommand=self.scrollbar.set)
+        self.treeview["columns"] = ["Time", "Source IP", "Source port", "Destination IP", "Destination port", "Label"]
+        
+        for col in self.treeview["columns"]:
+            self.treeview.heading(col, text=col)
+            self.treeview.column(col, minwidth=self.col_width, anchor="center")
+            
+        self.treeview.pack(fill=tk.BOTH, expand=True)
+        self.treeview.tag_configure('oddrow', background="white")
+        self.treeview.tag_configure('evenrow', background="lightblue")
+        
+        self.scrollbar.config(command=self.treeview.yview)
+        
+        self.root.minsize(self.col_width*len(self.treeview["columns"]), 600)
+        
         self.kdd_feature_extractor = subprocess.Popen(['./kdd99extractor', '-e'], stdout=subprocess.PIPE, universal_newlines=True)
+        self.root.protocol("WM_DELETE_WINDOW", self.close_window)
+        self.thread = Thread(target=self.update_gui)
+        self.thread.start()
 
-    def build(self):
-        self.layout = BoxLayout(orientation='vertical')
-        self.data_display = BoxLayout(orientation='vertical', spacing=5)
-        self.layout.add_widget(self.data_display)
-        Clock.schedule_interval(self.update_data, 0.1)  # Update every 0.1 seconds
-        return self.layout
+    def update_gui(self):
+        
+        count = 0
+        while True:
+            output = self.kdd_feature_extractor.stdout.readline().strip()
+            if not output:
+                break
+            tag = 'evenrow' if count%2 ==0 else 'oddrow'
+            count += 1
+            # Splitting the output and getting the last four elements
+            data = output.split(',')[-5:]
+            data.insert(0, data.pop(-1))
+            
+            datetime_obj = datetime.fromisoformat(data[0])
+            data[0] = datetime_obj.strftime("%Y-%m-%d %I:%M:%S %p")
 
-    def update_data(self, dt):
-        output = self.kdd_feature_extractor.stdout.readline().strip()
-        if output:
-            data = output.split(',')[-4:]
-            self.data_queue.append(data)
-            self.update_display()
+            # Inserting the data into the treeview
+            self.treeview.insert("", "end", values=data, tags=(tag,))
 
-    def update_display(self):
-        self.data_display.clear_widgets()
-        for data in self.data_queue:
-            row = BoxLayout(orientation='horizontal', spacing=10)
-            for value in data:
-                label = Label(text=value)
-                row.add_widget(label)
-            self.data_display.add_widget(row)
-        self.layout.scroll_y = 0  # Scroll to the bottom
+            self.treeview.yview_moveto(1)
+            self.root.update_idletasks()
+
+    def close_window(self):
+        self.kdd_feature_extractor.kill()  # Kill the subprocess
+        self.root.destroy()
 
 if __name__ == "__main__":
-    KddFeatureExtractorGUI().run()
+    root = tk.Tk()
+    app = KddFeatureExtractorGUI(root)
+    root.mainloop()
