@@ -86,14 +86,15 @@ class SignatureDetector(Predictor):
         return np.argmax(y, axis=1)
 
     @staticmethod
-    def to_nomial(y):
+    def to_nominal(y):
         return [
             SignatureDetector.attack_labels[i] for i in SignatureDetector.to_ordinal(y)
         ]
 
     def predict(self, data):
         X = self.preprocess(data)
-        return SignatureDetector.to_nomial(self.model.predict(X, verbose=0))
+        prediction = self.model.predict(X, verbose=0)
+        return SignatureDetector.to_nominal(prediction), np.max(prediction)
 
 
 class ReverseCategoryEncodingLayer(Layer):

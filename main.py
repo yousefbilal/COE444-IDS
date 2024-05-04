@@ -8,8 +8,10 @@ import socket
 
 
 class KddFeatureExtractorGUI:
-    def __init__(self, root: tk.Tk):
-        self.col_width = 175
+
+    def __init__(self, root: tk.Tk, threshold: float = 0.7):
+        COL_WIDTH = 175
+        self.threshold = threshold
         self.root = root
         self.root.geometry()
         self.root.title("KDD Feature Extractor")
@@ -20,7 +22,12 @@ class KddFeatureExtractorGUI:
         self.scrollbar = ttk.Scrollbar(self.main_frame, orient="vertical")
         self.scrollbar.pack(side="right", fill="y")
         self.style = ttk.Style()
+        self.style.theme_use("clam")
         self.style.configure("Treeview", rowheight=25)
+        self.style.configure(
+            "Treeview.Heading", font=("Helvetica", 10, "bold"), background="PowderBlue"
+        )
+        self.style.layout("Treeview", [("Treeview.treearea", {"sticky": "nswe"})])
         self.treeview = ttk.Treeview(
             self.main_frame, show=["headings"], yscrollcommand=self.scrollbar.set
         )
@@ -31,19 +38,21 @@ class KddFeatureExtractorGUI:
             "Destination IP",
             "Destination port",
             "Signature label",
+            "Confidence",
         ]
 
         for col in self.treeview["columns"]:
             self.treeview.heading(col, text=col)
-            self.treeview.column(col, minwidth=self.col_width, anchor="center")
+            self.treeview.column(col, minwidth=COL_WIDTH, anchor="center")
 
         self.treeview.pack(fill=tk.BOTH, expand=True)
         self.treeview.tag_configure("normal", background="white")
-        self.treeview.tag_configure("abnormal", background="lightcoral")
+        self.treeview.tag_configure("abnormal conf", background="lightcoral")
+        self.treeview.tag_configure("abnormal unconf", background="lightyellow")
 
         self.scrollbar.config(command=self.treeview.yview)
 
-        self.root.minsize(self.col_width * len(self.treeview["columns"]), 600)
+        self.root.minsize(COL_WIDTH * len(self.treeview["columns"]), 600)
 
         self.kdd_feature_extractor = subprocess.Popen(
             ["./kdd99extractor", "-e"], stdout=subprocess.PIPE, universal_newlines=True
@@ -91,16 +100,26 @@ class KddFeatureExtractorGUI:
             display_data[0] = datetime_obj.strftime("%Y-%m-%d %I:%M:%S %p")
 
             try:
-                sd_output = self.sd.predict(output)[0]
+                sd_output, prob = self.sd.predict(output)
+                sd_output = sd_output[0]
             except:
                 continue
-            tag = "normal" if sd_output == "normal" else "abnormal"
+            if sd_output == "normal":
+                tag = "normal"
+            elif prob > self.threshold:
+                tag = "abnormal conf"
+            else:
+                tag = "abnormal unconf"
 
-            display_data.append(sd_output)
-            # Inserting the data into the treeview
+            display_data.extend([sd_output, prob])
+
+            current_scroll_position = self.treeview.yview()[1]
+
             self.treeview.insert("", "end", values=display_data, tags=(tag,))
+            # if at the bottm of the treeview scroll down
+            if current_scroll_position == 1.0:
+                self.treeview.yview_moveto(1)
 
-            self.treeview.yview_moveto(1)
             self.root.update_idletasks()
 
     def close_window(self):
