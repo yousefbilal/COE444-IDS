@@ -86,8 +86,8 @@ class KddFeatureExtractorGUI:
             output = output.split(",")
             output[9] = str(min(int(output[9]), 511))
             output[10] = str(min(int(output[10]), 511))
-            output[18] = str(min(output[18], 255))
-            output[19] = str(min(output[19], 255))
+            output[18] = str(min(int(output[18]), 255))
+            output[19] = str(min(int(output[19]), 255))
             if not output:
                 break
 
