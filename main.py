@@ -81,18 +81,20 @@ class KddFeatureExtractorGUI:
 
     def update_gui(self):
 
-        count = 0
         while True:
             output = self.kdd_feature_extractor.stdout.readline().strip()
+            output = output.split(",")
+            output[9] = str(min(int(output[9]), 511))
+            output[10] = str(min(int(output[10]), 511))
             if not output:
                 break
 
-            display_data = output.split(",")[-5:]
+            display_data = output[-5:]
 
             if display_data[0] == self.ip:
                 continue
 
-            output = ",".join(output.split(",")[:-5])
+            output = ",".join(output[:-5])
 
             display_data.insert(0, display_data.pop(-1))
 
