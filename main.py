@@ -93,9 +93,9 @@ class KddFeatureExtractorGUI:
 
             if display_data[0] == self.ip:
                 continue
-
+            
             output = ",".join(output[:-5])
-
+            print(output)
             display_data.insert(0, display_data.pop(-1))
 
             datetime_obj = datetime.fromisoformat(display_data[0])
