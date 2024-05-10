@@ -14,7 +14,7 @@ class KddFeatureExtractorGUI:
         self.threshold = threshold
         self.root = root
         self.root.geometry()
-        self.root.title("KDD Feature Extractor")
+        self.root.title("Intrusion Detection System Using KD99 Dataset")
 
         self.main_frame = ttk.Frame(root)
         self.main_frame.pack(fill=tk.BOTH, expand=True)
