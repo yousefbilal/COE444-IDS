@@ -62,9 +62,9 @@ class KddFeatureExtractorGUI:
         self.thread.start()
 
         self.sd = SignatureDetector(
-            "signature_detection/signature_detection.h5",
-            "signature_detection/SD_scaler.pkl",
-            "signature_detection/SD_cat_input_codes.pkl",
+            "signature_detection/X_signature_detection.h5",
+            "signature_detection/X_SD_scaler.pkl",
+            "signature_detection/X_SD_cat_input_codes.pkl",
         )
 
         # self.ad = AnomalyDetector(
